@@ -1,15 +1,21 @@
+import { Readable } from 'stream';
 import {
   EmailVerifyConfig,
   VerifyOptions,
   VerifyResponse,
-  BulkVerifyOptions,
-  BulkJobResponse,
-  BulkResultsOptions,
-  BulkResultsResponse,
+  BatchVerifyOptions,
+  BatchVerifyResponse,
+  FileUploadOptions,
+  FileUploadResponse,
+  FileJobStatusOptions,
+  FileJobStatusResponse,
+  FileJobResultsOptions,
   CreditsResponse,
   WebhookConfig,
   Webhook,
+  HealthCheckResponse,
   ApiError,
+  ApiResponse,
 } from './types.js';
 import {
   EmailVerifyError,
@@ -46,6 +52,65 @@ export class EmailVerify {
     method: string,
     path: string,
     body?: unknown,
+    attempt: number = 1,
+    options?: { skipAuth?: boolean; customTimeout?: number }
+  ): Promise<T> {
+    const url = `${this.baseUrl}${path}`;
+    const controller = new AbortController();
+    const requestTimeout = options?.customTimeout ?? this.timeout;
+    const timeoutId = setTimeout(() => controller.abort(), requestTimeout);
+
+    try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'User-Agent': '@emailverify/node/1.0.0',
+      };
+
+      if (!options?.skipAuth) {
+        headers['EV-API-KEY'] = this.apiKey;
+      }
+
+      const response = await fetch(url, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        await this.handleErrorResponse(response, attempt, method, path, body, options);
+      }
+
+      if (response.status === 204) {
+        return undefined as T;
+      }
+
+      const json = await response.json() as ApiResponse<T>;
+      return json.data;
+    } catch (error) {
+      clearTimeout(timeoutId);
+
+      if (error instanceof EmailVerifyError) {
+        throw error;
+      }
+
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new TimeoutError(`Request timed out after ${requestTimeout}ms`);
+      }
+
+      throw new EmailVerifyError(
+        `Network error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'NETWORK_ERROR',
+        0
+      );
+    }
+  }
+
+  private async requestMultipart<T>(
+    path: string,
+    formData: FormData,
     attempt: number = 1
   ): Promise<T> {
     const url = `${this.baseUrl}${path}`;
@@ -54,27 +119,23 @@ export class EmailVerify {
 
     try {
       const response = await fetch(url, {
-        method,
+        method: 'POST',
         headers: {
-          'EMAILVERIFY-API-KEY': this.apiKey,
-          'Content-Type': 'application/json',
+          'EV-API-KEY': this.apiKey,
           'User-Agent': '@emailverify/node/1.0.0',
         },
-        body: body ? JSON.stringify(body) : undefined,
+        body: formData,
         signal: controller.signal,
       });
 
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        await this.handleErrorResponse(response, attempt, method, path, body);
+        await this.handleErrorResponse(response, attempt, 'POST', path, formData);
       }
 
-      if (response.status === 204) {
-        return undefined as T;
-      }
-
-      return await response.json() as T;
+      const json = await response.json() as ApiResponse<T>;
+      return json.data;
     } catch (error) {
       clearTimeout(timeoutId);
 
@@ -99,7 +160,8 @@ export class EmailVerify {
     attempt: number,
     method: string,
     path: string,
-    body?: unknown
+    body?: unknown,
+    options?: { skipAuth?: boolean; customTimeout?: number }
   ): Promise<never> {
     let errorData: { error?: ApiError } = {};
     try {
@@ -116,11 +178,8 @@ export class EmailVerify {
       case 401:
         throw new AuthenticationError(message);
 
-      case 403:
-        if (code === 'INSUFFICIENT_CREDITS') {
-          throw new InsufficientCreditsError(message);
-        }
-        throw new EmailVerifyError(message, code, 403);
+      case 402:
+        throw new InsufficientCreditsError(message);
 
       case 404:
         throw new NotFoundError(message);
@@ -129,7 +188,7 @@ export class EmailVerify {
         const retryAfter = parseInt(response.headers.get('Retry-After') || '0', 10);
         if (attempt < this.retries) {
           await this.sleep((retryAfter || Math.pow(2, attempt)) * 1000);
-          return this.request(method, path, body, attempt + 1);
+          return this.request(method, path, body, attempt + 1, options);
         }
         throw new RateLimitError(message, retryAfter);
 
@@ -141,7 +200,7 @@ export class EmailVerify {
       case 503:
         if (attempt < this.retries) {
           await this.sleep(Math.pow(2, attempt) * 1000);
-          return this.request(method, path, body, attempt + 1);
+          return this.request(method, path, body, attempt + 1, options);
         }
         throw new EmailVerifyError(message, code, response.status);
 
@@ -158,68 +217,145 @@ export class EmailVerify {
    * Verify a single email address
    */
   async verify(email: string, options?: VerifyOptions): Promise<VerifyResponse> {
-    return this.request<VerifyResponse>('POST', '/verify', {
+    return this.request<VerifyResponse>('POST', '/verify/single', {
       email,
-      smtp_check: options?.smtpCheck ?? true,
-      timeout: options?.timeout,
+      check_smtp: options?.checkSmtp ?? true,
     });
   }
 
   /**
-   * Submit a bulk verification job
+   * Verify multiple emails synchronously (max 50 emails)
    */
-  async verifyBulk(
+  async verifyBatch(
     emails: string[],
-    options?: BulkVerifyOptions
-  ): Promise<BulkJobResponse> {
-    if (emails.length > 10000) {
-      throw new ValidationError('Maximum 10,000 emails per bulk job');
+    options?: BatchVerifyOptions
+  ): Promise<BatchVerifyResponse> {
+    if (emails.length > 50) {
+      throw new ValidationError('Maximum 50 emails per batch request. For larger lists, use uploadFile().');
     }
 
-    return this.request<BulkJobResponse>('POST', '/verify/bulk', {
+    return this.request<BatchVerifyResponse>('POST', '/verify/bulk', {
       emails,
-      smtp_check: options?.smtpCheck ?? true,
-      webhook_url: options?.webhookUrl,
+      check_smtp: options?.checkSmtp ?? true,
     });
   }
 
   /**
-   * Get the status of a bulk verification job
+   * Upload a file for asynchronous verification
    */
-  async getBulkJobStatus(jobId: string): Promise<BulkJobResponse> {
-    return this.request<BulkJobResponse>('GET', `/verify/bulk/${jobId}`);
+  async uploadFile(
+    file: Buffer | Readable,
+    fileName: string,
+    options?: FileUploadOptions
+  ): Promise<FileUploadResponse> {
+    const formData = new FormData();
+
+    // Convert Buffer or Readable stream to Blob
+    let fileBlob: Blob;
+    if (Buffer.isBuffer(file)) {
+      fileBlob = new Blob([file]);
+    } else {
+      // For ReadStream, we need to collect the data first
+      const chunks: Buffer[] = [];
+      for await (const chunk of file) {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      }
+      fileBlob = new Blob([Buffer.concat(chunks)]);
+    }
+
+    formData.append('file', fileBlob, fileName);
+
+    if (options?.checkSmtp !== undefined) {
+      formData.append('check_smtp', String(options.checkSmtp));
+    }
+    if (options?.emailColumn) {
+      formData.append('email_column', options.emailColumn);
+    }
+    if (options?.preserveOriginal !== undefined) {
+      formData.append('preserve_original', String(options.preserveOriginal));
+    }
+
+    return this.requestMultipart<FileUploadResponse>('/verify/file', formData);
   }
 
   /**
-   * Get the results of a completed bulk verification job
+   * Get the status of a file verification job
+   * Supports long-polling with timeout parameter (0-300 seconds)
    */
-  async getBulkJobResults(
+  async getFileJobStatus(
     jobId: string,
-    options?: BulkResultsOptions
-  ): Promise<BulkResultsResponse> {
+    options?: FileJobStatusOptions
+  ): Promise<FileJobStatusResponse> {
     const params = new URLSearchParams();
-    if (options?.limit) params.set('limit', options.limit.toString());
-    if (options?.offset !== undefined) params.set('offset', options.offset.toString());
-    if (options?.status) params.set('status', options.status);
+
+    if (options?.timeout !== undefined) {
+      if (options.timeout < 0 || options.timeout > 300) {
+        throw new ValidationError('Timeout must be between 0 and 300 seconds');
+      }
+      params.set('timeout', options.timeout.toString());
+    }
 
     const query = params.toString();
-    const path = `/verify/bulk/${jobId}/results${query ? `?${query}` : ''}`;
+    const path = `/verify/file/${jobId}${query ? `?${query}` : ''}`;
 
-    return this.request<BulkResultsResponse>('GET', path);
+    // Extend the request timeout if long-polling is used
+    const customTimeout = options?.timeout
+      ? (options.timeout + 10) * 1000 // Add 10 seconds buffer
+      : undefined;
+
+    return this.request<FileJobStatusResponse>('GET', path, undefined, 1, { customTimeout });
   }
 
   /**
-   * Poll for bulk job completion
+   * Get the results of a completed file verification job
+   * Can filter by status types (valid, invalid, catchall, role, unknown, disposable, risky)
    */
-  async waitForBulkJobCompletion(
+  async getFileJobResults(
+    jobId: string,
+    options?: FileJobResultsOptions
+  ): Promise<Response> {
+    const params = new URLSearchParams();
+
+    if (options?.valid) params.set('valid', 'true');
+    if (options?.invalid) params.set('invalid', 'true');
+    if (options?.catchall) params.set('catchall', 'true');
+    if (options?.role) params.set('role', 'true');
+    if (options?.unknown) params.set('unknown', 'true');
+    if (options?.disposable) params.set('disposable', 'true');
+    if (options?.risky) params.set('risky', 'true');
+
+    const query = params.toString();
+    const path = `/verify/file/${jobId}/results${query ? `?${query}` : ''}`;
+    const url = `${this.baseUrl}${path}`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'EV-API-KEY': this.apiKey,
+        'User-Agent': '@emailverify/node/1.0.0',
+      },
+      redirect: 'follow',
+    });
+
+    if (!response.ok) {
+      await this.handleErrorResponse(response, 1, 'GET', path);
+    }
+
+    return response;
+  }
+
+  /**
+   * Poll for file job completion
+   */
+  async waitForFileJobCompletion(
     jobId: string,
     pollInterval: number = 5000,
     maxWait: number = 600000
-  ): Promise<BulkJobResponse> {
+  ): Promise<FileJobStatusResponse> {
     const startTime = Date.now();
 
     while (Date.now() - startTime < maxWait) {
-      const status = await this.getBulkJobStatus(jobId);
+      const status = await this.getFileJobStatus(jobId);
 
       if (status.status === 'completed' || status.status === 'failed') {
         return status;
@@ -228,7 +364,7 @@ export class EmailVerify {
       await this.sleep(pollInterval);
     }
 
-    throw new TimeoutError(`Bulk job ${jobId} did not complete within ${maxWait}ms`);
+    throw new TimeoutError(`File job ${jobId} did not complete within ${maxWait}ms`);
   }
 
   /**
@@ -248,8 +384,8 @@ export class EmailVerify {
   /**
    * List all webhooks
    */
-  async listWebhooks(): Promise<Webhook[]> {
-    return this.request<Webhook[]>('GET', '/webhooks');
+  async listWebhooks(): Promise<{ webhooks: Webhook[]; total: number }> {
+    return this.request<{ webhooks: Webhook[]; total: number }>('GET', '/webhooks');
   }
 
   /**
@@ -278,5 +414,52 @@ export class EmailVerify {
       return false;
     }
     return crypto.timingSafeEqual(sigBuffer, expectedBuffer);
+  }
+
+  /**
+   * Health check endpoint (no authentication required)
+   */
+  async healthCheck(): Promise<HealthCheckResponse> {
+    const url = this.baseUrl.replace(/\/v1$/, '') + '/health';
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'User-Agent': '@emailverify/node/1.0.0',
+        },
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new EmailVerifyError(
+          response.statusText || 'Health check failed',
+          'HEALTH_CHECK_FAILED',
+          response.status
+        );
+      }
+
+      return await response.json() as HealthCheckResponse;
+    } catch (error) {
+      clearTimeout(timeoutId);
+
+      if (error instanceof EmailVerifyError) {
+        throw error;
+      }
+
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new TimeoutError(`Request timed out after ${this.timeout}ms`);
+      }
+
+      throw new EmailVerifyError(
+        `Network error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'NETWORK_ERROR',
+        0
+      );
+    }
   }
 }

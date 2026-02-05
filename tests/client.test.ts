@@ -48,76 +48,82 @@ describe('EmailVerify Client', () => {
 
   describe('verify', () => {
     it('should verify a single email successfully', async () => {
-      const mockResponse = {
-        email: 'test@example.com',
-        status: 'valid',
-        result: {
-          deliverable: true,
-          valid_format: true,
-          valid_domain: true,
-          valid_mx: true,
-          disposable: false,
-          role: false,
-          catchall: false,
-          free: false,
-          smtp_valid: true,
+      const mockApiResponse = {
+        success: true,
+        code: '0',
+        message: 'Success',
+        data: {
+          email: 'test@example.com',
+          status: 'valid',
+          score: 0.95,
+          is_deliverable: true,
+          is_disposable: false,
+          is_catchall: false,
+          is_role: false,
+          is_free: false,
+          domain: 'example.com',
+          domain_age: 10,
+          mx_records: ['mail.example.com'],
+          smtp_check: true,
+          reason: 'accepted',
+          response_time: 250,
+          credits_used: 1,
         },
-        score: 0.95,
-        reason: null,
-        credits_used: 1,
       };
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: async () => mockResponse,
+        json: async () => mockApiResponse,
       });
 
       const result = await client.verify('test@example.com');
 
-      expect(result).toEqual(mockResponse);
+      expect(result.email).toBe('test@example.com');
+      expect(result.status).toBe('valid');
+      expect(result.is_deliverable).toBe(true);
       expect(mockFetch).toHaveBeenCalledWith(
-        'https://api.emailverify.ai/v1/verify',
+        'https://api.emailverify.ai/v1/verify/single',
         expect.objectContaining({
           method: 'POST',
           headers: expect.objectContaining({
-            'EMAILVERIFY-API-KEY': 'test-api-key',
+            'EV-API-KEY': 'test-api-key',
             'Content-Type': 'application/json',
           }),
           body: JSON.stringify({
             email: 'test@example.com',
-            smtp_check: true,
-            timeout: undefined,
+            check_smtp: true,
           }),
         })
       );
     });
 
     it('should verify with custom options', async () => {
-      const mockResponse = {
-        email: 'test@example.com',
-        status: 'valid',
-        result: {},
-        score: 0.95,
-        reason: null,
-        credits_used: 1,
+      const mockApiResponse = {
+        success: true,
+        code: '0',
+        message: 'Success',
+        data: {
+          email: 'test@example.com',
+          status: 'valid',
+          score: 0.95,
+        },
       };
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: async () => mockResponse,
+        json: async () => mockApiResponse,
       });
 
-      await client.verify('test@example.com', { smtpCheck: false, timeout: 5000 });
+      await client.verify('test@example.com', { checkSmtp: false });
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'https://api.emailverify.ai/v1/verify',
+        'https://api.emailverify.ai/v1/verify/single',
         expect.objectContaining({
           body: JSON.stringify({
             email: 'test@example.com',
-            smtp_check: false,
-            timeout: 5000,
+            check_smtp: false,
           }),
         })
       );
@@ -149,11 +155,11 @@ describe('EmailVerify Client', () => {
       await expect(client.verify('invalid')).rejects.toThrow(ValidationError);
     });
 
-    it('should throw InsufficientCreditsError on 403 with INSUFFICIENT_CREDITS code', async () => {
+    it('should throw InsufficientCreditsError on 402', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
-        status: 403,
-        statusText: 'Forbidden',
+        status: 402,
+        statusText: 'Payment Required',
         json: async () => ({
           error: { code: 'INSUFFICIENT_CREDITS', message: 'Not enough credits' },
         }),
@@ -196,111 +202,135 @@ describe('EmailVerify Client', () => {
     });
   });
 
-  describe('verifyBulk', () => {
-    it('should submit bulk verification job successfully', async () => {
-      const mockResponse = {
-        job_id: 'job_123',
-        status: 'processing',
-        total: 3,
-        processed: 0,
-        valid: 0,
-        invalid: 0,
-        unknown: 0,
-        credits_used: 3,
-        created_at: '2025-01-15T10:30:00Z',
+  describe('verifyBatch', () => {
+    it('should verify batch of emails synchronously', async () => {
+      const mockApiResponse = {
+        success: true,
+        code: '0',
+        message: 'Success',
+        data: {
+          results: [
+            { email: 'user1@example.com', status: 'valid', score: 0.95, is_deliverable: true, credits_used: 1 },
+            { email: 'user2@example.com', status: 'invalid', score: 0.0, is_deliverable: false, credits_used: 0 },
+            { email: 'user3@example.com', status: 'valid', score: 0.90, is_deliverable: true, credits_used: 1 },
+          ],
+          total_emails: 3,
+          valid_emails: 2,
+          invalid_emails: 1,
+          credits_used: 2,
+          process_time: 1500,
+        },
       };
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: async () => mockResponse,
+        json: async () => mockApiResponse,
       });
 
-      const result = await client.verifyBulk([
+      const result = await client.verifyBatch([
         'user1@example.com',
         'user2@example.com',
         'user3@example.com',
       ]);
 
-      expect(result).toEqual(mockResponse);
+      expect(result.total_emails).toBe(3);
+      expect(result.valid_emails).toBe(2);
+      expect(result.results).toHaveLength(3);
     });
 
-    it('should throw ValidationError when emails exceed 10000', async () => {
-      const emails = Array(10001).fill('test@example.com');
-      await expect(client.verifyBulk(emails)).rejects.toThrow(ValidationError);
-    });
-
-    it('should include webhook URL when provided', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({ job_id: 'job_123' }),
-      });
-
-      await client.verifyBulk(['test@example.com'], {
-        webhookUrl: 'https://example.com/webhook',
-      });
-
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          body: expect.stringContaining('webhook_url'),
-        })
-      );
+    it('should throw ValidationError when emails exceed 50', async () => {
+      const emails = Array(51).fill('test@example.com');
+      await expect(client.verifyBatch(emails)).rejects.toThrow(ValidationError);
     });
   });
 
-  describe('getBulkJobStatus', () => {
-    it('should get bulk job status successfully', async () => {
-      const mockResponse = {
-        job_id: 'job_123',
-        status: 'processing',
-        total: 100,
-        processed: 50,
-        progress_percent: 50,
+  describe('getFileJobStatus', () => {
+    it('should get file job status successfully', async () => {
+      const mockApiResponse = {
+        success: true,
+        code: '0',
+        message: 'Success',
+        data: {
+          job_id: 'job_123',
+          status: 'processing',
+          file_name: 'emails.csv',
+          total_emails: 100,
+          processed_emails: 50,
+          progress_percent: 50,
+          valid_emails: 40,
+          invalid_emails: 5,
+          unknown_emails: 5,
+          credits_used: 50,
+          created_at: '2026-02-04T10:30:00Z',
+        },
       };
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: async () => mockResponse,
+        json: async () => mockApiResponse,
       });
 
-      const result = await client.getBulkJobStatus('job_123');
+      const result = await client.getFileJobStatus('job_123');
 
-      expect(result).toEqual(mockResponse);
+      expect(result.job_id).toBe('job_123');
+      expect(result.progress_percent).toBe(50);
       expect(mockFetch).toHaveBeenCalledWith(
-        'https://api.emailverify.ai/v1/verify/bulk/job_123',
+        'https://api.emailverify.ai/v1/verify/file/job_123',
         expect.objectContaining({ method: 'GET' })
       );
     });
-  });
 
-  describe('getBulkJobResults', () => {
-    it('should get bulk job results with pagination', async () => {
-      const mockResponse = {
-        job_id: 'job_123',
-        total: 100,
-        limit: 50,
-        offset: 0,
-        results: [],
+    it('should support long-polling timeout parameter', async () => {
+      const mockApiResponse = {
+        success: true,
+        code: '0',
+        message: 'Success',
+        data: {
+          job_id: 'job_123',
+          status: 'completed',
+          total_emails: 100,
+          processed_emails: 100,
+          progress_percent: 100,
+        },
       };
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: async () => mockResponse,
+        json: async () => mockApiResponse,
       });
 
-      const result = await client.getBulkJobResults('job_123', {
-        limit: 50,
-        offset: 0,
-        status: 'valid',
-      });
+      await client.getFileJobStatus('job_123', { timeout: 30 });
 
-      expect(result).toEqual(mockResponse);
       expect(mockFetch).toHaveBeenCalledWith(
-        'https://api.emailverify.ai/v1/verify/bulk/job_123/results?limit=50&offset=0&status=valid',
+        'https://api.emailverify.ai/v1/verify/file/job_123?timeout=30',
+        expect.any(Object)
+      );
+    });
+  });
+
+  describe('getFileJobResults', () => {
+    it('should get file job results with filters', async () => {
+      const csvContent = 'email,status,score\ntest@example.com,valid,0.95';
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () => csvContent,
+      });
+
+      const response = await client.getFileJobResults('job_123', {
+        valid: true,
+        invalid: true,
+      });
+
+      // getFileJobResults returns a Response object
+      const result = await response.text();
+      expect(result).toContain('test@example.com');
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/v1/verify/file/job_123/results?'),
         expect.any(Object)
       );
     });
@@ -308,72 +338,96 @@ describe('EmailVerify Client', () => {
 
   describe('getCredits', () => {
     it('should get credits successfully', async () => {
-      const mockResponse = {
-        available: 9500,
-        used: 500,
-        total: 10000,
-        plan: 'Professional',
-        resets_at: '2025-02-01T00:00:00Z',
-        rate_limit: {
-          requests_per_hour: 10000,
-          remaining: 9850,
+      const mockApiResponse = {
+        success: true,
+        code: '0',
+        message: 'Success',
+        data: {
+          account_id: 'abc123',
+          api_key_id: 'key_xyz',
+          api_key_name: 'Default API Key',
+          credits_balance: 9500,
+          credits_consumed: 500,
+          credits_added: 10000,
+          last_updated: '2026-02-04T10:30:00Z',
         },
       };
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: async () => mockResponse,
+        json: async () => mockApiResponse,
       });
 
       const result = await client.getCredits();
 
-      expect(result).toEqual(mockResponse);
+      expect(result.credits_balance).toBe(9500);
+      expect(result.account_id).toBe('abc123');
     });
   });
 
   describe('webhooks', () => {
     it('should create webhook successfully', async () => {
-      const mockResponse = {
-        id: 'webhook_123',
-        url: 'https://example.com/webhook',
-        events: ['verification.completed'],
-        created_at: '2025-01-15T10:30:00Z',
+      const mockApiResponse = {
+        success: true,
+        code: '0',
+        message: 'Success',
+        data: {
+          id: 'webhook_123',
+          url: 'https://example.com/webhook',
+          events: ['file.completed', 'file.failed'],
+          secret: 'generated-secret',
+          is_active: true,
+          created_at: '2026-02-04T10:30:00Z',
+          updated_at: '2026-02-04T10:30:00Z',
+        },
       };
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: async () => mockResponse,
+        json: async () => mockApiResponse,
       });
 
       const result = await client.createWebhook({
         url: 'https://example.com/webhook',
-        events: ['verification.completed'],
+        events: ['file.completed', 'file.failed'],
       });
 
-      expect(result).toEqual(mockResponse);
+      expect(result.id).toBe('webhook_123');
+      expect(result.secret).toBe('generated-secret');
     });
 
     it('should list webhooks successfully', async () => {
-      const mockResponse = [
-        {
-          id: 'webhook_123',
-          url: 'https://example.com/webhook',
-          events: ['verification.completed'],
-          created_at: '2025-01-15T10:30:00Z',
+      const mockApiResponse = {
+        success: true,
+        code: '0',
+        message: 'Success',
+        data: {
+          webhooks: [
+            {
+              id: 'webhook_123',
+              url: 'https://example.com/webhook',
+              events: ['file.completed'],
+              is_active: true,
+              created_at: '2026-02-04T10:30:00Z',
+              updated_at: '2026-02-04T10:30:00Z',
+            },
+          ],
+          total: 1,
         },
-      ];
+      };
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: async () => mockResponse,
+        json: async () => mockApiResponse,
       });
 
       const result = await client.listWebhooks();
 
-      expect(result).toEqual(mockResponse);
+      expect(result.webhooks).toHaveLength(1);
+      expect(result.total).toBe(1);
     });
 
     it('should delete webhook successfully', async () => {
@@ -383,6 +437,31 @@ describe('EmailVerify Client', () => {
       });
 
       await expect(client.deleteWebhook('webhook_123')).resolves.toBeUndefined();
+    });
+  });
+
+  describe('healthCheck', () => {
+    it('should check health successfully', async () => {
+      const mockResponse = {
+        status: 'ok',
+        time: 1705319400,
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => mockResponse,
+      });
+
+      const result = await client.healthCheck();
+
+      expect(result.status).toBe('ok');
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://api.emailverify.ai/health',
+        expect.objectContaining({
+          method: 'GET',
+        })
+      );
     });
   });
 
@@ -428,6 +507,12 @@ describe('Error Classes', () => {
     const error = new ValidationError('Invalid input', 'Email format is wrong');
     expect(error.name).toBe('ValidationError');
     expect(error.details).toBe('Email format is wrong');
+  });
+
+  it('should create InsufficientCreditsError with HTTP 402', () => {
+    const error = new InsufficientCreditsError();
+    expect(error.name).toBe('InsufficientCreditsError');
+    expect(error.statusCode).toBe(402);
   });
 
   it('should create TimeoutError with custom message', () => {

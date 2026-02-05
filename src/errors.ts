@@ -47,7 +47,7 @@ export class ValidationError extends EmailVerifyError {
 
 export class InsufficientCreditsError extends EmailVerifyError {
   constructor(message: string = 'Insufficient credits') {
-    super(message, 'INSUFFICIENT_CREDITS', 403);
+    super(message, 'INSUFFICIENT_CREDITS', 402);
     this.name = 'InsufficientCreditsError';
     Object.setPrototypeOf(this, InsufficientCreditsError.prototype);
   }
