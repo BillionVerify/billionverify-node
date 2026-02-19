@@ -1,6 +1,6 @@
 import { Readable } from 'stream';
 import {
-  EmailVerifyConfig,
+  BillionVerifyConfig,
   VerifyOptions,
   VerifyResponse,
   BatchVerifyOptions,
@@ -18,7 +18,7 @@ import {
   ApiResponse,
 } from './types.js';
 import {
-  EmailVerifyError,
+  BillionVerifyError,
   AuthenticationError,
   RateLimitError,
   ValidationError,
@@ -27,17 +27,17 @@ import {
   TimeoutError,
 } from './errors.js';
 
-const DEFAULT_BASE_URL = 'https://api.emailverify.ai/v1';
+const DEFAULT_BASE_URL = 'https://api.billionverify.com/v1';
 const DEFAULT_TIMEOUT = 30000;
 const DEFAULT_RETRIES = 3;
 
-export class EmailVerify {
+export class BillionVerify {
   private readonly apiKey: string;
   private readonly baseUrl: string;
   private readonly timeout: number;
   private readonly retries: number;
 
-  constructor(config: EmailVerifyConfig) {
+  constructor(config: BillionVerifyConfig) {
     if (!config.apiKey) {
       throw new AuthenticationError('API key is required');
     }
@@ -63,7 +63,7 @@ export class EmailVerify {
     try {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
-        'User-Agent': '@emailverify/node/1.0.0',
+        'User-Agent': '@billionverify/node/1.0.0',
       };
 
       if (!options?.skipAuth) {
@@ -92,7 +92,7 @@ export class EmailVerify {
     } catch (error) {
       clearTimeout(timeoutId);
 
-      if (error instanceof EmailVerifyError) {
+      if (error instanceof BillionVerifyError) {
         throw error;
       }
 
@@ -100,7 +100,7 @@ export class EmailVerify {
         throw new TimeoutError(`Request timed out after ${requestTimeout}ms`);
       }
 
-      throw new EmailVerifyError(
+      throw new BillionVerifyError(
         `Network error: ${error instanceof Error ? error.message : 'Unknown error'}`,
         'NETWORK_ERROR',
         0
@@ -122,7 +122,7 @@ export class EmailVerify {
         method: 'POST',
         headers: {
           'EV-API-KEY': this.apiKey,
-          'User-Agent': '@emailverify/node/1.0.0',
+          'User-Agent': '@billionverify/node/1.0.0',
         },
         body: formData,
         signal: controller.signal,
@@ -139,7 +139,7 @@ export class EmailVerify {
     } catch (error) {
       clearTimeout(timeoutId);
 
-      if (error instanceof EmailVerifyError) {
+      if (error instanceof BillionVerifyError) {
         throw error;
       }
 
@@ -147,7 +147,7 @@ export class EmailVerify {
         throw new TimeoutError(`Request timed out after ${this.timeout}ms`);
       }
 
-      throw new EmailVerifyError(
+      throw new BillionVerifyError(
         `Network error: ${error instanceof Error ? error.message : 'Unknown error'}`,
         'NETWORK_ERROR',
         0
@@ -202,10 +202,10 @@ export class EmailVerify {
           await this.sleep(Math.pow(2, attempt) * 1000);
           return this.request(method, path, body, attempt + 1, options);
         }
-        throw new EmailVerifyError(message, code, response.status);
+        throw new BillionVerifyError(message, code, response.status);
 
       default:
-        throw new EmailVerifyError(message, code, response.status);
+        throw new BillionVerifyError(message, code, response.status);
     }
   }
 
@@ -332,7 +332,7 @@ export class EmailVerify {
       method: 'GET',
       headers: {
         'EV-API-KEY': this.apiKey,
-        'User-Agent': '@emailverify/node/1.0.0',
+        'User-Agent': '@billionverify/node/1.0.0',
       },
       redirect: 'follow',
     });
@@ -428,7 +428,7 @@ export class EmailVerify {
       const response = await fetch(url, {
         method: 'GET',
         headers: {
-          'User-Agent': '@emailverify/node/1.0.0',
+          'User-Agent': '@billionverify/node/1.0.0',
         },
         signal: controller.signal,
       });
@@ -436,7 +436,7 @@ export class EmailVerify {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        throw new EmailVerifyError(
+        throw new BillionVerifyError(
           response.statusText || 'Health check failed',
           'HEALTH_CHECK_FAILED',
           response.status
@@ -447,7 +447,7 @@ export class EmailVerify {
     } catch (error) {
       clearTimeout(timeoutId);
 
-      if (error instanceof EmailVerifyError) {
+      if (error instanceof BillionVerifyError) {
         throw error;
       }
 
@@ -455,7 +455,7 @@ export class EmailVerify {
         throw new TimeoutError(`Request timed out after ${this.timeout}ms`);
       }
 
-      throw new EmailVerifyError(
+      throw new BillionVerifyError(
         `Network error: ${error instanceof Error ? error.message : 'Unknown error'}`,
         'NETWORK_ERROR',
         0

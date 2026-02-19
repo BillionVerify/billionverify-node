@@ -11,7 +11,7 @@
  */
 
 import {
-  EmailVerify,
+  BillionVerify,
   AuthenticationError,
   RateLimitError,
   ValidationError,
@@ -20,10 +20,10 @@ import {
 } from '../src/index.js';
 
 // Initialize the client
-const client = new EmailVerify({
-  apiKey: process.env.EMAILVERIFY_API_KEY!,
+const client = new BillionVerify({
+  apiKey: process.env.BILLIONVERIFY_API_KEY!,
   // Optional configuration:
-  // baseUrl: 'https://api.emailverify.ai/v1',
+  // baseUrl: 'https://api.billionverify.com/v1',
   // retries: 3,
 });
 
@@ -153,13 +153,13 @@ function handleError(error: unknown) {
 
 // Main execution
 async function main() {
-  console.log('EmailVerify Node.js SDK - Basic Examples\n');
-  console.log('========================================\n');
+  console.log('BillionVerify Node.js SDK - Basic Examples\n');
+  console.log('==========================================\n');
 
   // Check API key
-  if (!process.env.EMAILVERIFY_API_KEY) {
-    console.error('Error: EMAILVERIFY_API_KEY environment variable is not set');
-    console.error('Please set it with: export EMAILVERIFY_API_KEY=your_api_key');
+  if (!process.env.BILLIONVERIFY_API_KEY) {
+    console.error('Error: BILLIONVERIFY_API_KEY environment variable is not set');
+    console.error('Please set it with: export BILLIONVERIFY_API_KEY=your_api_key');
     process.exit(1);
   }
 
@@ -169,7 +169,7 @@ async function main() {
   await singleVerificationExample();
   await batchVerificationExample();
 
-  console.log('========================================');
+  console.log('==========================================');
   console.log('Examples completed!');
 }
 

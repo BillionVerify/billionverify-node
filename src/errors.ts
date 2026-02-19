@@ -1,4 +1,4 @@
-export class EmailVerifyError extends Error {
+export class BillionVerifyError extends Error {
   public readonly code: string;
   public readonly statusCode: number;
   public readonly details?: string;
@@ -10,15 +10,15 @@ export class EmailVerifyError extends Error {
     details?: string
   ) {
     super(message);
-    this.name = 'EmailVerifyError';
+    this.name = 'BillionVerifyError';
     this.code = code;
     this.statusCode = statusCode;
     this.details = details;
-    Object.setPrototypeOf(this, EmailVerifyError.prototype);
+    Object.setPrototypeOf(this, BillionVerifyError.prototype);
   }
 }
 
-export class AuthenticationError extends EmailVerifyError {
+export class AuthenticationError extends BillionVerifyError {
   constructor(message: string = 'Invalid or missing API key') {
     super(message, 'INVALID_API_KEY', 401);
     this.name = 'AuthenticationError';
@@ -26,7 +26,7 @@ export class AuthenticationError extends EmailVerifyError {
   }
 }
 
-export class RateLimitError extends EmailVerifyError {
+export class RateLimitError extends BillionVerifyError {
   public readonly retryAfter: number;
 
   constructor(message: string = 'Rate limit exceeded', retryAfter: number = 0) {
@@ -37,7 +37,7 @@ export class RateLimitError extends EmailVerifyError {
   }
 }
 
-export class ValidationError extends EmailVerifyError {
+export class ValidationError extends BillionVerifyError {
   constructor(message: string, details?: string) {
     super(message, 'INVALID_REQUEST', 400, details);
     this.name = 'ValidationError';
@@ -45,7 +45,7 @@ export class ValidationError extends EmailVerifyError {
   }
 }
 
-export class InsufficientCreditsError extends EmailVerifyError {
+export class InsufficientCreditsError extends BillionVerifyError {
   constructor(message: string = 'Insufficient credits') {
     super(message, 'INSUFFICIENT_CREDITS', 402);
     this.name = 'InsufficientCreditsError';
@@ -53,7 +53,7 @@ export class InsufficientCreditsError extends EmailVerifyError {
   }
 }
 
-export class NotFoundError extends EmailVerifyError {
+export class NotFoundError extends BillionVerifyError {
   constructor(message: string = 'Resource not found') {
     super(message, 'NOT_FOUND', 404);
     this.name = 'NotFoundError';
@@ -61,7 +61,7 @@ export class NotFoundError extends EmailVerifyError {
   }
 }
 
-export class TimeoutError extends EmailVerifyError {
+export class TimeoutError extends BillionVerifyError {
   constructor(message: string = 'Request timed out') {
     super(message, 'TIMEOUT', 504);
     this.name = 'TimeoutError';

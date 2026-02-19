@@ -11,7 +11,7 @@
  */
 
 import {
-  EmailVerify,
+  BillionVerify,
   AuthenticationError,
   ValidationError,
   NotFoundError,
@@ -19,8 +19,8 @@ import {
 import type { Webhook, WebhookPayload, WebhookEvent } from '../src/index.js';
 
 // Initialize the client
-const client = new EmailVerify({
-  apiKey: process.env.EMAILVERIFY_API_KEY!,
+const client = new BillionVerify({
+  apiKey: process.env.BILLIONVERIFY_API_KEY!,
 });
 
 async function createWebhookExample() {
@@ -29,7 +29,7 @@ async function createWebhookExample() {
   try {
     // Create a webhook for file verification events
     const webhook = await client.createWebhook({
-      url: 'https://your-app.com/webhooks/emailverify',
+      url: 'https://your-app.com/webhooks/billionverify',
       events: ['file.completed', 'file.failed'],
     });
 
@@ -157,7 +157,7 @@ function verifyWebhookSignatureExample() {
       credits_used: 1000,
       process_time_seconds: 120,
       result_file_path: '/results/task_abc123.csv',
-      download_url: 'https://api.emailverify.ai/v1/verify/file/task_abc123/results',
+      download_url: 'https://api.billionverify.com/v1/verify/file/task_abc123/results',
     },
   };
 
@@ -209,22 +209,22 @@ function webhookHandlerExample() {
 // Example Express.js webhook handler
 
 import express from 'express';
-import { EmailVerify } from '@emailverify-ai/node';
-import type { WebhookPayload } from '@emailverify-ai/node';
+import { BillionVerify } from '@billionverify/node';
+import type { WebhookPayload } from '@billionverify/node';
 
 const app = express();
 
 // IMPORTANT: Use raw body parser for webhook verification
-app.use('/webhooks/emailverify', express.raw({ type: 'application/json' }));
+app.use('/webhooks/billionverify', express.raw({ type: 'application/json' }));
 
-const client = new EmailVerify({
-  apiKey: process.env.EMAILVERIFY_API_KEY!,
+const client = new BillionVerify({
+  apiKey: process.env.BILLIONVERIFY_API_KEY!,
 });
 
 // Store your webhook secret securely (e.g., environment variable)
-const WEBHOOK_SECRET = process.env.EMAILVERIFY_WEBHOOK_SECRET!;
+const WEBHOOK_SECRET = process.env.BILLIONVERIFY_WEBHOOK_SECRET!;
 
-app.post('/webhooks/emailverify', (req, res) => {
+app.post('/webhooks/billionverify', (req, res) => {
   // Get the raw body as string
   const rawBody = req.body.toString();
 
@@ -304,13 +304,13 @@ function handleError(error: unknown) {
 
 // Main execution
 async function main() {
-  console.log('EmailVerify Node.js SDK - Webhook Examples\n');
-  console.log('==========================================\n');
+  console.log('BillionVerify Node.js SDK - Webhook Examples\n');
+  console.log('=============================================\n');
 
   // Check API key
-  if (!process.env.EMAILVERIFY_API_KEY) {
-    console.error('Error: EMAILVERIFY_API_KEY environment variable is not set');
-    console.error('Please set it with: export EMAILVERIFY_API_KEY=your_api_key');
+  if (!process.env.BILLIONVERIFY_API_KEY) {
+    console.error('Error: BILLIONVERIFY_API_KEY environment variable is not set');
+    console.error('Please set it with: export BILLIONVERIFY_API_KEY=your_api_key');
     process.exit(1);
   }
 
@@ -344,7 +344,7 @@ async function main() {
   console.log('--- Webhook Handler Code Example ---\n');
   webhookHandlerExample();
 
-  console.log('==========================================');
+  console.log('=============================================');
   console.log('Webhook examples completed!');
 }
 

@@ -13,7 +13,7 @@
 import { createReadStream, createWriteStream, writeFileSync } from 'fs';
 import { Readable } from 'stream';
 import {
-  EmailVerify,
+  BillionVerify,
   AuthenticationError,
   ValidationError,
   InsufficientCreditsError,
@@ -23,8 +23,8 @@ import {
 import type { FileJobStatusResponse } from '../src/index.js';
 
 // Initialize the client
-const client = new EmailVerify({
-  apiKey: process.env.EMAILVERIFY_API_KEY!,
+const client = new BillionVerify({
+  apiKey: process.env.BILLIONVERIFY_API_KEY!,
 });
 
 async function uploadFileExample() {
@@ -299,13 +299,13 @@ function handleError(error: unknown) {
 
 // Main execution
 async function main() {
-  console.log('EmailVerify Node.js SDK - File Upload Examples\n');
-  console.log('==============================================\n');
+  console.log('BillionVerify Node.js SDK - File Upload Examples\n');
+  console.log('=================================================\n');
 
   // Check API key
-  if (!process.env.EMAILVERIFY_API_KEY) {
-    console.error('Error: EMAILVERIFY_API_KEY environment variable is not set');
-    console.error('Please set it with: export EMAILVERIFY_API_KEY=your_api_key');
+  if (!process.env.BILLIONVERIFY_API_KEY) {
+    console.error('Error: BILLIONVERIFY_API_KEY environment variable is not set');
+    console.error('Please set it with: export BILLIONVERIFY_API_KEY=your_api_key');
     process.exit(1);
   }
 
@@ -332,7 +332,7 @@ async function main() {
   // Stream results to file
   await streamResultsToFileExample(taskId);
 
-  console.log('==============================================');
+  console.log('=================================================');
   console.log('File upload examples completed!');
 }
 

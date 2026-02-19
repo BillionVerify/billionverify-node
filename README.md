@@ -1,22 +1,22 @@
-# @emailverify-ai/node
+# @billionverify/node
 
-Official EmailVerify Node.js SDK for email verification.
+Official BillionVerify Node.js SDK for email verification.
 
-**Documentation:** https://emailverify.ai/docs
+**Documentation:** https://billionverify.com/docs
 
 ## Installation
 
 ```bash
-npm install @emailverify-ai/node
+npm install @billionverify/node
 ```
 
 ## Quick Start
 
 ```typescript
-import { EmailVerify } from '@emailverify-ai/node';
+import { BillionVerify } from '@billionverify/node';
 
-const client = new EmailVerify({
-  apiKey: process.env.EMAILVERIFY_API_KEY!,
+const client = new BillionVerify({
+  apiKey: process.env.BILLIONVERIFY_API_KEY!,
 });
 
 // Verify a single email
@@ -28,9 +28,9 @@ console.log(result.is_deliverable); // true or false
 ## Configuration
 
 ```typescript
-const client = new EmailVerify({
+const client = new BillionVerify({
   apiKey: 'your-api-key',    // Required
-  baseUrl: 'https://api.emailverify.ai/v1', // Optional
+  baseUrl: 'https://api.billionverify.com/v1', // Optional
   retries: 3,                // Optional: Number of retries (default: 3)
 });
 ```
@@ -191,7 +191,7 @@ console.log(health);
 ```typescript
 // Create a webhook
 const webhook = await client.createWebhook({
-  url: 'https://your-app.com/webhooks/emailverify',
+  url: 'https://your-app.com/webhooks/billionverify',
   events: ['file.completed', 'file.failed'],
 });
 console.log(webhook.id);     // 'wh_abc123'
@@ -235,7 +235,7 @@ const isValid = client.verifyWebhookSignature(
     "credits_used": 1000,
     "process_time_seconds": 120,
     "result_file_path": "/results/task_abc123.csv",
-    "download_url": "https://api.emailverify.ai/v1/verify/file/task_abc123/results"
+    "download_url": "https://api.billionverify.com/v1/verify/file/task_abc123/results"
   }
 }
 ```
@@ -244,14 +244,15 @@ const isValid = client.verifyWebhookSignature(
 
 ```typescript
 import {
-  EmailVerify,
+  BillionVerify,
+  BillionVerifyError,
   AuthenticationError,
   RateLimitError,
   ValidationError,
   InsufficientCreditsError,
   NotFoundError,
   TimeoutError,
-} from '@emailverify-ai/node';
+} from '@billionverify/node';
 
 try {
   const result = await client.verify('user@example.com');
@@ -278,6 +279,7 @@ This SDK is written in TypeScript and includes full type definitions.
 
 ```typescript
 import type {
+  BillionVerifyConfig,
   VerifyResponse,
   VerificationStatus,
   BatchVerifyResponse,
@@ -288,7 +290,7 @@ import type {
   WebhookEvent,
   WebhookPayload,
   HealthCheckResponse,
-} from '@emailverify-ai/node';
+} from '@billionverify/node';
 ```
 
 ## License

@@ -1,4 +1,4 @@
-export interface EmailVerifyConfig {
+export interface BillionVerifyConfig {
   apiKey: string;
   baseUrl?: string;
   timeout?: number;

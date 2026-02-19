@@ -1,6 +1,6 @@
-export { EmailVerify } from './client.js';
+export { BillionVerify } from './client.js';
 export {
-  EmailVerifyError,
+  BillionVerifyError,
   AuthenticationError,
   RateLimitError,
   ValidationError,
@@ -9,7 +9,7 @@ export {
   TimeoutError,
 } from './errors.js';
 export type {
-  EmailVerifyConfig,
+  BillionVerifyConfig,
   VerifyOptions,
   VerifyResponse,
   VerificationStatus,

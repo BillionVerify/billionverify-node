@@ -1,7 +1,7 @@
 {
-  "name": "@emailverify-ai/node",
+  "name": "@billionverify/node",
   "version": "1.0.3",
-  "description": "Official EmailVerify Node.js SDK for email verification",
+  "description": "Official BillionVerify Node.js SDK for email verification",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -25,16 +25,16 @@
     "email",
     "verification",
     "validation",
-    "emailverify",
+    "billionverify",
     "email-verification"
   ],
-  "author": "EmailVerify",
+  "author": "BillionVerify",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/emailverify-ai/node-sdk.git"
+    "url": "https://github.com/BillionVerify/node-sdk.git"
   },
-  "homepage": "https://emailverify.ai",
+  "homepage": "https://billionverify.com",
   "devDependencies": {
     "@types/node": "^20.0.0",
     "eslint": "^8.0.0",

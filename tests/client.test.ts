@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { EmailVerify } from '../src/client.js';
+import { BillionVerify } from '../src/client.js';
 import {
   AuthenticationError,
   RateLimitError,
@@ -13,11 +13,11 @@ import {
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
-describe('EmailVerify Client', () => {
-  let client: EmailVerify;
+describe('BillionVerify Client', () => {
+  let client: BillionVerify;
 
   beforeEach(() => {
-    client = new EmailVerify({ apiKey: 'test-api-key' });
+    client = new BillionVerify({ apiKey: 'test-api-key' });
     mockFetch.mockReset();
   });
 
@@ -27,22 +27,22 @@ describe('EmailVerify Client', () => {
 
   describe('constructor', () => {
     it('should throw AuthenticationError when API key is missing', () => {
-      expect(() => new EmailVerify({ apiKey: '' })).toThrow(AuthenticationError);
+      expect(() => new BillionVerify({ apiKey: '' })).toThrow(AuthenticationError);
     });
 
     it('should create client with default options', () => {
-      const client = new EmailVerify({ apiKey: 'test-key' });
-      expect(client).toBeInstanceOf(EmailVerify);
+      const client = new BillionVerify({ apiKey: 'test-key' });
+      expect(client).toBeInstanceOf(BillionVerify);
     });
 
     it('should create client with custom options', () => {
-      const client = new EmailVerify({
+      const client = new BillionVerify({
         apiKey: 'test-key',
         baseUrl: 'https://custom.api.com',
         timeout: 60000,
         retries: 5,
       });
-      expect(client).toBeInstanceOf(EmailVerify);
+      expect(client).toBeInstanceOf(BillionVerify);
     });
   });
 
@@ -83,7 +83,7 @@ describe('EmailVerify Client', () => {
       expect(result.status).toBe('valid');
       expect(result.is_deliverable).toBe(true);
       expect(mockFetch).toHaveBeenCalledWith(
-        'https://api.emailverify.ai/v1/verify/single',
+        'https://api.billionverify.com/v1/verify/single',
         expect.objectContaining({
           method: 'POST',
           headers: expect.objectContaining({
@@ -119,7 +119,7 @@ describe('EmailVerify Client', () => {
       await client.verify('test@example.com', { checkSmtp: false });
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'https://api.emailverify.ai/v1/verify/single',
+        'https://api.billionverify.com/v1/verify/single',
         expect.objectContaining({
           body: JSON.stringify({
             email: 'test@example.com',
@@ -197,7 +197,7 @@ describe('EmailVerify Client', () => {
       // Mock multiple calls for retries
       mockFetch.mockResolvedValue(rateLimitResponse);
 
-      const clientNoRetry = new EmailVerify({ apiKey: 'test-key', retries: 1 });
+      const clientNoRetry = new BillionVerify({ apiKey: 'test-key', retries: 1 });
       await expect(clientNoRetry.verify('test@example.com')).rejects.toThrow(RateLimitError);
     });
   });
@@ -277,7 +277,7 @@ describe('EmailVerify Client', () => {
       expect(result.job_id).toBe('job_123');
       expect(result.progress_percent).toBe(50);
       expect(mockFetch).toHaveBeenCalledWith(
-        'https://api.emailverify.ai/v1/verify/file/job_123',
+        'https://api.billionverify.com/v1/verify/file/job_123',
         expect.objectContaining({ method: 'GET' })
       );
     });
@@ -305,7 +305,7 @@ describe('EmailVerify Client', () => {
       await client.getFileJobStatus('job_123', { timeout: 30 });
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'https://api.emailverify.ai/v1/verify/file/job_123?timeout=30',
+        'https://api.billionverify.com/v1/verify/file/job_123?timeout=30',
         expect.any(Object)
       );
     });
@@ -457,7 +457,7 @@ describe('EmailVerify Client', () => {
 
       expect(result.status).toBe('ok');
       expect(mockFetch).toHaveBeenCalledWith(
-        'https://api.emailverify.ai/health',
+        'https://api.billionverify.com/health',
         expect.objectContaining({
           method: 'GET',
         })
