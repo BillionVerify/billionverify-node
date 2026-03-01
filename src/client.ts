@@ -63,7 +63,7 @@ export class BillionVerify {
     try {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
-        'User-Agent': '@billionverify/node/1.0.0',
+        'User-Agent': 'billionverify-sdk/1.0.4',
       };
 
       if (!options?.skipAuth) {
@@ -122,7 +122,7 @@ export class BillionVerify {
         method: 'POST',
         headers: {
           'EV-API-KEY': this.apiKey,
-          'User-Agent': '@billionverify/node/1.0.0',
+          'User-Agent': 'billionverify-sdk/1.0.4',
         },
         body: formData,
         signal: controller.signal,
@@ -332,7 +332,7 @@ export class BillionVerify {
       method: 'GET',
       headers: {
         'EV-API-KEY': this.apiKey,
-        'User-Agent': '@billionverify/node/1.0.0',
+        'User-Agent': 'billionverify-sdk/1.0.4',
       },
       redirect: 'follow',
     });
@@ -428,7 +428,7 @@ export class BillionVerify {
       const response = await fetch(url, {
         method: 'GET',
         headers: {
-          'User-Agent': '@billionverify/node/1.0.0',
+          'User-Agent': 'billionverify-sdk/1.0.4',
         },
         signal: controller.signal,
       });

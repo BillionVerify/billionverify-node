@@ -1,4 +1,4 @@
-# @billionverify/node
+# billionverify-sdk
 
 Official BillionVerify Node.js SDK for email verification.
 
@@ -7,13 +7,13 @@ Official BillionVerify Node.js SDK for email verification.
 ## Installation
 
 ```bash
-npm install @billionverify/node
+npm install billionverify-sdk
 ```
 
 ## Quick Start
 
 ```typescript
-import { BillionVerify } from '@billionverify/node';
+import { BillionVerify } from 'billionverify-sdk';
 
 const client = new BillionVerify({
   apiKey: process.env.BILLIONVERIFY_API_KEY!,
@@ -252,7 +252,7 @@ import {
   InsufficientCreditsError,
   NotFoundError,
   TimeoutError,
-} from '@billionverify/node';
+} from 'billionverify-sdk';
 
 try {
   const result = await client.verify('user@example.com');
@@ -290,7 +290,7 @@ import type {
   WebhookEvent,
   WebhookPayload,
   HealthCheckResponse,
-} from '@billionverify/node';
+} from 'billionverify-sdk';
 ```
 
 ## License

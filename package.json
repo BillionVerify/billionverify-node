@@ -1,6 +1,6 @@
 {
-  "name": "@billionverify/node",
-  "version": "1.0.3",
+  "name": "billionverify-sdk",
+  "version": "1.0.4",
   "description": "Official BillionVerify Node.js SDK for email verification",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -32,7 +32,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/BillionVerify/node-sdk.git"
+    "url": "https://github.com/BillionVerify/billionverify-node.git"
   },
   "homepage": "https://billionverify.com",
   "devDependencies": {

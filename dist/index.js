@@ -21,8 +21,8 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 var index_exports = {};
 __export(index_exports, {
   AuthenticationError: () => AuthenticationError,
-  EmailVerify: () => EmailVerify,
-  EmailVerifyError: () => EmailVerifyError,
+  BillionVerify: () => BillionVerify,
+  BillionVerifyError: () => BillionVerifyError,
   InsufficientCreditsError: () => InsufficientCreditsError,
   NotFoundError: () => NotFoundError,
   RateLimitError: () => RateLimitError,
@@ -32,27 +32,27 @@ __export(index_exports, {
 module.exports = __toCommonJS(index_exports);
 
 // src/errors.ts
-var EmailVerifyError = class _EmailVerifyError extends Error {
+var BillionVerifyError = class _BillionVerifyError extends Error {
   code;
   statusCode;
   details;
   constructor(message, code, statusCode, details) {
     super(message);
-    this.name = "EmailVerifyError";
+    this.name = "BillionVerifyError";
     this.code = code;
     this.statusCode = statusCode;
     this.details = details;
-    Object.setPrototypeOf(this, _EmailVerifyError.prototype);
+    Object.setPrototypeOf(this, _BillionVerifyError.prototype);
   }
 };
-var AuthenticationError = class _AuthenticationError extends EmailVerifyError {
+var AuthenticationError = class _AuthenticationError extends BillionVerifyError {
   constructor(message = "Invalid or missing API key") {
     super(message, "INVALID_API_KEY", 401);
     this.name = "AuthenticationError";
     Object.setPrototypeOf(this, _AuthenticationError.prototype);
   }
 };
-var RateLimitError = class _RateLimitError extends EmailVerifyError {
+var RateLimitError = class _RateLimitError extends BillionVerifyError {
   retryAfter;
   constructor(message = "Rate limit exceeded", retryAfter = 0) {
     super(message, "RATE_LIMIT_EXCEEDED", 429);
@@ -61,28 +61,28 @@ var RateLimitError = class _RateLimitError extends EmailVerifyError {
     Object.setPrototypeOf(this, _RateLimitError.prototype);
   }
 };
-var ValidationError = class _ValidationError extends EmailVerifyError {
+var ValidationError = class _ValidationError extends BillionVerifyError {
   constructor(message, details) {
     super(message, "INVALID_REQUEST", 400, details);
     this.name = "ValidationError";
     Object.setPrototypeOf(this, _ValidationError.prototype);
   }
 };
-var InsufficientCreditsError = class _InsufficientCreditsError extends EmailVerifyError {
+var InsufficientCreditsError = class _InsufficientCreditsError extends BillionVerifyError {
   constructor(message = "Insufficient credits") {
     super(message, "INSUFFICIENT_CREDITS", 402);
     this.name = "InsufficientCreditsError";
     Object.setPrototypeOf(this, _InsufficientCreditsError.prototype);
   }
 };
-var NotFoundError = class _NotFoundError extends EmailVerifyError {
+var NotFoundError = class _NotFoundError extends BillionVerifyError {
   constructor(message = "Resource not found") {
     super(message, "NOT_FOUND", 404);
     this.name = "NotFoundError";
     Object.setPrototypeOf(this, _NotFoundError.prototype);
   }
 };
-var TimeoutError = class _TimeoutError extends EmailVerifyError {
+var TimeoutError = class _TimeoutError extends BillionVerifyError {
   constructor(message = "Request timed out") {
     super(message, "TIMEOUT", 504);
     this.name = "TimeoutError";
@@ -91,10 +91,10 @@ var TimeoutError = class _TimeoutError extends EmailVerifyError {
 };
 
 // src/client.ts
-var DEFAULT_BASE_URL = "https://api.emailverify.ai/v1";
+var DEFAULT_BASE_URL = "https://api.billionverify.com/v1";
 var DEFAULT_TIMEOUT = 3e4;
 var DEFAULT_RETRIES = 3;
-var EmailVerify = class {
+var BillionVerify = class {
   apiKey;
   baseUrl;
   timeout;
@@ -116,7 +116,7 @@ var EmailVerify = class {
     try {
       const headers = {
         "Content-Type": "application/json",
-        "User-Agent": "@emailverify/node/1.0.0"
+        "User-Agent": "billionverify-sdk/1.0.4"
       };
       if (!options?.skipAuth) {
         headers["EV-API-KEY"] = this.apiKey;
@@ -138,13 +138,13 @@ var EmailVerify = class {
       return json.data;
     } catch (error) {
       clearTimeout(timeoutId);
-      if (error instanceof EmailVerifyError) {
+      if (error instanceof BillionVerifyError) {
         throw error;
       }
       if (error instanceof Error && error.name === "AbortError") {
         throw new TimeoutError(`Request timed out after ${requestTimeout}ms`);
       }
-      throw new EmailVerifyError(
+      throw new BillionVerifyError(
         `Network error: ${error instanceof Error ? error.message : "Unknown error"}`,
         "NETWORK_ERROR",
         0
@@ -160,7 +160,7 @@ var EmailVerify = class {
         method: "POST",
         headers: {
           "EV-API-KEY": this.apiKey,
-          "User-Agent": "@emailverify/node/1.0.0"
+          "User-Agent": "billionverify-sdk/1.0.4"
         },
         body: formData,
         signal: controller.signal
@@ -173,13 +173,13 @@ var EmailVerify = class {
       return json.data;
     } catch (error) {
       clearTimeout(timeoutId);
-      if (error instanceof EmailVerifyError) {
+      if (error instanceof BillionVerifyError) {
         throw error;
       }
       if (error instanceof Error && error.name === "AbortError") {
         throw new TimeoutError(`Request timed out after ${this.timeout}ms`);
       }
-      throw new EmailVerifyError(
+      throw new BillionVerifyError(
         `Network error: ${error instanceof Error ? error.message : "Unknown error"}`,
         "NETWORK_ERROR",
         0
@@ -218,9 +218,9 @@ var EmailVerify = class {
           await this.sleep(Math.pow(2, attempt) * 1e3);
           return this.request(method, path, body, attempt + 1, options);
         }
-        throw new EmailVerifyError(message, code, response.status);
+        throw new BillionVerifyError(message, code, response.status);
       default:
-        throw new EmailVerifyError(message, code, response.status);
+        throw new BillionVerifyError(message, code, response.status);
     }
   }
   sleep(ms) {
@@ -311,7 +311,7 @@ var EmailVerify = class {
       method: "GET",
       headers: {
         "EV-API-KEY": this.apiKey,
-        "User-Agent": "@emailverify/node/1.0.0"
+        "User-Agent": "billionverify-sdk/1.0.4"
       },
       redirect: "follow"
     });
@@ -382,13 +382,13 @@ var EmailVerify = class {
       const response = await fetch(url, {
         method: "GET",
         headers: {
-          "User-Agent": "@emailverify/node/1.0.0"
+          "User-Agent": "billionverify-sdk/1.0.4"
         },
         signal: controller.signal
       });
       clearTimeout(timeoutId);
       if (!response.ok) {
-        throw new EmailVerifyError(
+        throw new BillionVerifyError(
           response.statusText || "Health check failed",
           "HEALTH_CHECK_FAILED",
           response.status
@@ -397,13 +397,13 @@ var EmailVerify = class {
       return await response.json();
     } catch (error) {
       clearTimeout(timeoutId);
-      if (error instanceof EmailVerifyError) {
+      if (error instanceof BillionVerifyError) {
         throw error;
       }
       if (error instanceof Error && error.name === "AbortError") {
         throw new TimeoutError(`Request timed out after ${this.timeout}ms`);
       }
-      throw new EmailVerifyError(
+      throw new BillionVerifyError(
         `Network error: ${error instanceof Error ? error.message : "Unknown error"}`,
         "NETWORK_ERROR",
         0
@@ -414,8 +414,8 @@ var EmailVerify = class {
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   AuthenticationError,
-  EmailVerify,
-  EmailVerifyError,
+  BillionVerify,
+  BillionVerifyError,
   InsufficientCreditsError,
   NotFoundError,
   RateLimitError,

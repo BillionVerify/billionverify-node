@@ -209,8 +209,8 @@ function webhookHandlerExample() {
 // Example Express.js webhook handler
 
 import express from 'express';
-import { BillionVerify } from '@billionverify/node';
-import type { WebhookPayload } from '@billionverify/node';
+import { BillionVerify } from 'billionverify-sdk';
+import type { WebhookPayload } from 'billionverify-sdk';
 
 const app = express();
 

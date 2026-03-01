@@ -1,6 +1,6 @@
 import { Readable } from 'stream';
 
-interface EmailVerifyConfig {
+interface BillionVerifyConfig {
     apiKey: string;
     baseUrl?: string;
     timeout?: number;
@@ -166,12 +166,12 @@ interface ApiResponse<T> {
     data: T;
 }
 
-declare class EmailVerify {
+declare class BillionVerify {
     private readonly apiKey;
     private readonly baseUrl;
     private readonly timeout;
     private readonly retries;
-    constructor(config: EmailVerifyConfig);
+    constructor(config: BillionVerifyConfig);
     private request;
     private requestMultipart;
     private handleErrorResponse;
@@ -231,30 +231,30 @@ declare class EmailVerify {
     healthCheck(): Promise<HealthCheckResponse>;
 }
 
-declare class EmailVerifyError extends Error {
+declare class BillionVerifyError extends Error {
     readonly code: string;
     readonly statusCode: number;
     readonly details?: string;
     constructor(message: string, code: string, statusCode: number, details?: string);
 }
-declare class AuthenticationError extends EmailVerifyError {
+declare class AuthenticationError extends BillionVerifyError {
     constructor(message?: string);
 }
-declare class RateLimitError extends EmailVerifyError {
+declare class RateLimitError extends BillionVerifyError {
     readonly retryAfter: number;
     constructor(message?: string, retryAfter?: number);
 }
-declare class ValidationError extends EmailVerifyError {
+declare class ValidationError extends BillionVerifyError {
     constructor(message: string, details?: string);
 }
-declare class InsufficientCreditsError extends EmailVerifyError {
+declare class InsufficientCreditsError extends BillionVerifyError {
     constructor(message?: string);
 }
-declare class NotFoundError extends EmailVerifyError {
+declare class NotFoundError extends BillionVerifyError {
     constructor(message?: string);
 }
-declare class TimeoutError extends EmailVerifyError {
+declare class TimeoutError extends BillionVerifyError {
     constructor(message?: string);
 }
 
-export { type ApiError, type ApiResponse, AuthenticationError, type BatchVerifyOptions, type BatchVerifyResponse, type BatchVerifyResultItem, type CreditsResponse, type DomainReputation, EmailVerify, type EmailVerifyConfig, EmailVerifyError, type FileJobResultsOptions, type FileJobStatusOptions, type FileJobStatusResponse, type FileUploadOptions, type FileUploadResponse, type HealthCheckResponse, InsufficientCreditsError, NotFoundError, RateLimitError, TimeoutError, ValidationError, type VerificationStatus, type VerifyOptions, type VerifyResponse, type Webhook, type WebhookConfig, type WebhookEvent, type WebhookPayload };
+export { type ApiError, type ApiResponse, AuthenticationError, type BatchVerifyOptions, type BatchVerifyResponse, type BatchVerifyResultItem, BillionVerify, type BillionVerifyConfig, BillionVerifyError, type CreditsResponse, type DomainReputation, type FileJobResultsOptions, type FileJobStatusOptions, type FileJobStatusResponse, type FileUploadOptions, type FileUploadResponse, type HealthCheckResponse, InsufficientCreditsError, NotFoundError, RateLimitError, TimeoutError, ValidationError, type VerificationStatus, type VerifyOptions, type VerifyResponse, type Webhook, type WebhookConfig, type WebhookEvent, type WebhookPayload };
