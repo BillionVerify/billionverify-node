@@ -30,16 +30,20 @@ console.log(result.is_deliverable); // true or false
 ```typescript
 const client = new BillionVerify({
   apiKey: 'your-api-key',    // Required
-  baseUrl: 'https://api.billionverify.com/v1', // Optional
-  retries: 3,                // Optional: Number of retries (default: 3)
+  baseUrl: 'https://api.billionverify.com', // Optional; a trailing /v1 is accepted
+  timeout: 30000,            // Optional: milliseconds per request (default: 30000)
+  retries: 3,                // Optional: total attempts for 429/500/502/503 (default: 3)
 });
 ```
 
 ## Single Email Verification
 
 ```typescript
+// Options you leave out are not sent, so the server default applies.
 const result = await client.verify('user@example.com', {
-  checkSmtp: true,  // Optional: Perform SMTP verification (default: true)
+  checkSmtp: true,                 // Optional: force SMTP checking on or off
+  forceRefresh: false,             // Optional: skip every cache (a credit is always used)
+  includeDomainReputation: true,   // Optional: also fetch the MX IP reputation
 });
 
 console.log(result);
@@ -87,7 +91,8 @@ For synchronous verification of up to 50 emails:
 const result = await client.verifyBatch(
   ['user1@example.com', 'user2@example.com', 'user3@example.com'],
   {
-    checkSmtp: true,  // Optional
+    checkSmtp: true,       // Optional
+  forceRefresh: false,   // Optional
   }
 );
 
@@ -132,8 +137,9 @@ console.log(upload.task_id); // 'task_abc123xyz'
 const status = await client.getFileJobStatus(upload.task_id, {
   timeout: 30,  // Optional: Long-poll for up to 30 seconds (0-300)
 });
-console.log(status.progress_percent); // 45
-console.log(status.status); // 'pending', 'processing', 'completed', or 'failed'
+console.log(status.progress); // 45
+console.log(status.status); // 'preparing', 'pending', 'running', 'processing', 'merging', 'paused', 'completed', 'completed_with_warning', 'failed' or 'cancelled'
+console.log(status.deliverability_buckets?.strict_deliverable);
 
 // Wait for completion (polling)
 const completed = await client.waitForFileJobCompletion(
@@ -203,13 +209,17 @@ const { webhooks, total } = await client.listWebhooks();
 // Delete a webhook
 await client.deleteWebhook(webhook.id);
 
-// Verify webhook signature
-const isValid = client.verifyWebhookSignature(
-  rawBody,              // Raw request body as string
-  signature,            // Value of 'X-EV-Signature' header
-  webhook.secret        // Webhook secret from creation
-);
+// Verify a delivery: HMAC-SHA256 over "<timestamp>.<raw body>", plus the age of the delivery
+const isValid = client.verifyWebhookDelivery({
+  payload: rawBody,                          // Raw request body as string, exactly as received
+  signature: headers['x-webhook-signature'], // 'sha256=<hex>'
+  timestamp: headers['x-webhook-timestamp'], // Unix seconds
+  secret: webhook.secret,                    // Webhook secret from creation
+  toleranceSeconds: 300,                     // Optional (default 300); 0 turns the age check off
+});
 ```
+
+`verifyWebhookDelivery` is also exported on its own (`import { verifyWebhookDelivery } from 'billionverify-sdk'`). The older `client.verifyWebhookSignature(payload, signature, secret)` checks a signature over the body alone, which is not how the server signs, so it is deprecated and will not match a real delivery.
 
 ### Webhook Events
 
@@ -234,10 +244,54 @@ const isValid = client.verifyWebhookSignature(
     "disposable_emails": 5,
     "credits_used": 1000,
     "process_time_seconds": 120,
-    "result_file_path": "/results/task_abc123.csv",
     "download_url": "https://api.billionverify.com/v1/verify/file/task_abc123/results"
   }
 }
+```
+
+## Disposable check (free)
+
+```typescript
+const check = await client.checkDisposable('someone@mailinator.com');      // POST
+const same = await client.checkDisposableViaQuery('someone@mailinator.com'); // GET
+console.log(check.is_disposable);
+```
+
+## Results download and resuming jobs
+
+```typescript
+// The result CSV, optionally only some statuses (filters combine with OR). Returns a fetch Response.
+const response = await client.getFileJobResults(upload.task_id, { valid: true, catchall: true });
+const csv = await response.text();
+
+// Resume a paused job
+await client.resumeJob(upload.task_id);
+```
+
+Result files are served from a pre-signed storage URL. The client follows that redirect itself and does not send your API key to the storage host.
+
+## Domain search
+
+Give a domain, get the emails published on its site, each one verified. It runs asynchronously and costs 5 credits per returned email; `maxEmails` (1-200) caps the bill.
+
+```typescript
+const search = await client.createDomainSearch({
+  domain: 'example.com',
+  maxEmails: 20,
+  includeRoleBased: false,
+  maxPages: 100,
+});
+const done = await client.waitForDomainSearch(search.search_id); // polls every 5 s, up to 10 min
+done.result?.emails?.forEach((e) => console.log(e.email));
+
+// A CSV of domains
+const batch = await client.createDomainSearchBatch(createReadStream('domains.csv'), 'domains.csv', {
+  maxEmails: 10,
+  columnMap: { domain: 'Company Website' },
+});
+const progress = (await client.getDomainSearchBatch(batch.batch_id)).progress;
+const page = await client.listDomainSearchBatches({ limit: 20, status: 'completed' });
+const results = await client.downloadDomainSearchBatchResults(batch.batch_id); // 409 until the batch has finished
 ```
 
 ## Error Handling

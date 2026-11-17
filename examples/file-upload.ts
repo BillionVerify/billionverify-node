@@ -62,7 +62,6 @@ test@tempmail.com,Temp User,Disposable Inc`;
     console.log('Task ID:', upload.task_id);
     console.log('Status:', upload.status);
     console.log('Message:', upload.message);
-    console.log('File Name:', upload.file_name);
     console.log('File Size:', upload.file_size, 'bytes');
     console.log('Estimated Count:', upload.estimated_count);
     console.log('Unique Emails:', upload.unique_emails);
@@ -133,12 +132,11 @@ async function getJobStatusExample(taskId: string) {
 }
 
 function printJobStatus(status: FileJobStatusResponse) {
-  console.log('Job ID:', status.job_id);
+  console.log('Job ID:', status.task_id);
   console.log('Status:', status.status);
-  console.log('File Name:', status.file_name);
   console.log('Total Emails:', status.total_emails);
   console.log('Processed Emails:', status.processed_emails);
-  console.log('Progress:', status.progress_percent + '%');
+  console.log('Progress:', status.progress + '%');
   console.log('Valid Emails:', status.valid_emails);
   console.log('Invalid Emails:', status.invalid_emails);
   console.log('Unknown Emails:', status.unknown_emails);

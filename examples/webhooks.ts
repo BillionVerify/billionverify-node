@@ -156,7 +156,6 @@ function verifyWebhookSignatureExample() {
       disposable_emails: 5,
       credits_used: 1000,
       process_time_seconds: 120,
-      result_file_path: '/results/task_abc123.csv',
       download_url: 'https://api.billionverify.com/v1/verify/file/task_abc123/results',
     },
   };
@@ -167,12 +166,13 @@ function verifyWebhookSignatureExample() {
   // Webhook secret (stored from webhook creation)
   const webhookSecret = 'whsec_example_secret_12345';
 
-  // Signature from the X-EV-Signature header
-  // In production, this would come from the incoming request headers
+  // The server signs "<X-Webhook-Timestamp>.<raw body>" and sends the result in X-Webhook-Signature.
+  // In production both come from the incoming request headers.
+  const timestamp = String(Math.floor(Date.now() / 1000));
   const crypto = require('crypto');
   const expectedSignature = `sha256=${crypto
     .createHmac('sha256', webhookSecret)
-    .update(rawBody)
+    .update(`${timestamp}.${rawBody}`)
     .digest('hex')}`;
 
   console.log('Raw Body:', rawBody.substring(0, 100) + '...');
@@ -181,20 +181,22 @@ function verifyWebhookSignatureExample() {
   console.log('\n');
 
   // Verify the signature
-  const isValid = client.verifyWebhookSignature(
-    rawBody,
-    expectedSignature,
-    webhookSecret
-  );
+  const isValid = client.verifyWebhookDelivery({
+    payload: rawBody,
+    signature: expectedSignature,
+    timestamp,
+    secret: webhookSecret,
+  });
 
   console.log('Signature Valid:', isValid);
 
   // Test with invalid signature
-  const isInvalid = client.verifyWebhookSignature(
-    rawBody,
-    'sha256=invalid_signature',
-    webhookSecret
-  );
+  const isInvalid = client.verifyWebhookDelivery({
+    payload: rawBody,
+    signature: 'sha256=invalid_signature',
+    timestamp,
+    secret: webhookSecret,
+  });
 
   console.log('Invalid Signature Test:', !isInvalid ? 'Correctly rejected' : 'Error: should have been rejected');
   console.log('\n');
@@ -228,16 +230,22 @@ app.post('/webhooks/billionverify', (req, res) => {
   // Get the raw body as string
   const rawBody = req.body.toString();
 
-  // Get the signature from headers
-  const signature = req.headers['x-ev-signature'] as string;
+  // Get the signature and the timestamp from headers
+  const signature = req.headers['x-webhook-signature'] as string;
+  const timestamp = req.headers['x-webhook-timestamp'] as string;
 
-  if (!signature) {
-    console.error('Missing X-EV-Signature header');
+  if (!signature || !timestamp) {
+    console.error('Missing X-Webhook-Signature or X-Webhook-Timestamp header');
     return res.status(401).json({ error: 'Missing signature' });
   }
 
-  // Verify the signature
-  const isValid = client.verifyWebhookSignature(rawBody, signature, WEBHOOK_SECRET);
+  // Verify the signature and that the delivery is recent (300 seconds by default)
+  const isValid = client.verifyWebhookDelivery({
+    payload: rawBody,
+    signature,
+    timestamp,
+    secret: WEBHOOK_SECRET,
+  });
 
   if (!isValid) {
     console.error('Invalid webhook signature');

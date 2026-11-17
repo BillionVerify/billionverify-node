@@ -1,6 +1,6 @@
 {
   "name": "billionverify-sdk",
-  "version": "1.0.4",
+  "version": "1.1.0",
   "description": "Official BillionVerify Node.js SDK for email verification",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
